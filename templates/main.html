@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>客运站商务候车室管理系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f0f2f5; }
+
+        .navbar { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+        .logo { font-size: 18px; font-weight: bold; padding: 15px 0; }
+        .nav-menu { display: flex; flex-wrap: wrap; gap: 5px; }
+        .nav-item { padding: 15px 12px; cursor: pointer; font-size: 13px; transition: all 0.2s; border-bottom: 2px solid transparent; display: inline-block; text-decoration: none; color: white; }
+        .nav-item:hover { background: rgba(255,255,255,0.1); border-bottom-color: #ffc107; }
+        .nav-item.active { border-bottom-color: #ffc107; background: rgba(255,255,255,0.1); }
+
+        .app-container { display: flex; height: calc(100vh - 52px); overflow: hidden; }
+
+        .sidebar { width: 260px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+        .sidebar-header { background: #f8f9fa; padding: 12px 15px; border-bottom: 1px solid #e0e0e0; }
+        .sidebar-header h3 { font-size: 14px; color: #1e3c72; }
+
+        .tree-container { flex: 1; overflow-y: auto; padding: 10px; }
+
+        .tree-node { user-select: none; margin: 1px 0; }
+        .tree-node-header { display: flex; align-items: center; padding: 5px 4px; cursor: pointer; border-radius: 4px; transition: all 0.2s; font-size: 12px; }
+        .tree-node-header:hover { background: #e8f4f8; }
+        .tree-node-header.selected { background: #2a5298; color: white; }
+        .tree-node-header.selected .node-name { color: white; }
+        .tree-icon { width: 16px; font-size: 11px; margin-right: 3px; }
+        .node-name { font-size: 12px; flex: 1; }
+        .node-count { font-size: 9px; color: #999; margin-left: 4px; }
+        .tree-node-header.selected .node-count { color: rgba(255,255,255,0.7); }
+        .tree-children { margin-left: 16px; display: none; }
+        .tree-children.open { display: block; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 12px; min-width: 0; }
+
+        .content-header { margin-bottom: 10px; }
+        .content-header h2 { font-size: 17px; color: #1e3c72; }
+        .content-header p { font-size: 12px; color: #666; }
+
+        .result-info { background: #e3f2fd; padding: 5px 12px; border-radius: 5px; margin-bottom: 10px; font-size: 12px; }
+
+        .tab-container { background: white; border-radius: 8px 8px 0 0; border-bottom: 2px solid #1e3c72; display: flex; flex-wrap: wrap; }
+        .tab-btn { padding: 8px 18px; border: none; background: #f0f2f5; cursor: pointer; font-size: 13px; font-weight: bold; color: #666; transition: all 0.2s; border-radius: 8px 8px 0 0; }
+        .tab-btn:hover { background: #e0e0e0; color: #1e3c72; }
+        .tab-btn.active { background: #1e3c72; color: white; }
+        .tab-btn .badge { display: inline-block; background: #ff6b6b; color: white; border-radius: 10px; padding: 0 6px; font-size: 9px; margin-left: 4px; }
+        .tab-btn.active .badge { background: #ffd700; color: #333; }
+
+        .tab-content { display: none; background: white; border-radius: 0 0 8px 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow: hidden; }
+        .tab-content.active { display: block; }
+
+        /* 页签内操作栏 */
+        .tab-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; align-items: center; }
+        .tab-toolbar .btn-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+        .tab-toolbar .divider { width: 1px; height: 26px; background: #ddd; margin: 0 6px; }
+        .tab-toolbar .group-label { font-size: 11px; font-weight: bold; color: #888; margin-right: 4px; }
+
+        .btn { padding: 4px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; transition: all 0.2s; white-space: nowrap; }
+        .btn-primary { background: #2a5298; color: white; }
+        .btn-primary:hover { background: #1e3c72; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { background: #138496; }
+        .btn-export { background: #28a745; color: white; }
+        .btn-export:hover { background: #218838; }
+        .btn-template { background: #6c757d; color: white; }
+        .btn-template:hover { background: #5a6268; }
+        .btn-import { background: #17a2b8; color: white; }
+        .btn-import:hover { background: #138496; }
+        .btn-xs { padding: 1px 6px; font-size: 9px; }
+        .btn-sm { padding: 2px 10px; font-size: 10px; }
+
+        /* 全局操作栏样式 */
+        .global-toolbar { background: white; border-radius: 8px; padding: 10px 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .global-toolbar .group-label { font-size: 12px; font-weight: bold; color: #888; margin-right: 4px; }
+        .global-toolbar .btn-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+        .global-toolbar .divider { width: 1px; height: 26px; background: #ddd; margin: 0 8px; }
+
+        .table-wrapper { overflow: auto; max-height: calc(100vh - 460px); }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 9px; min-width: 1200px; }
+        .data-table th { background: #1e3c72; color: white; padding: 4px 3px; text-align: center; border: 1px solid #2a5298; position: sticky; top: 0; font-weight: 600; font-size: 8px; z-index: 10; }
+        .data-table td { padding: 3px 3px; border: 1px solid #e0e0e0; text-align: center; vertical-align: middle; font-size: 8px; }
+        .data-table tr:hover { background: #f8f9fa; }
+
+        .seq-column { width: 28px; background-color: #f8f9fa; font-weight: bold; text-align: center; }
+        .level-tag { display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 8px; font-weight: bold; }
+        .level-1 { background: #ffd700; color: #333; }
+        .level-2 { background: #c0c0c0; color: #333; }
+        .level-3 { background: #cd7f32; color: white; }
+        .level-4 { background: #8B7355; color: white; }
+        .level-default { background: #6c757d; color: white; }
+
+        .yellow-bg { background: #fff8e1; }
+        .yellow-header { background: #ffd700 !important; color: #333 !important; border-color: #d4a800 !important; }
+
+        .green-bg { background: #e8f5e9; }
+        .green-header { background: #4caf50 !important; color: white !important; border-color: #388e3c !important; }
+
+        .toggle-btn { cursor: pointer; color: #2a5298; font-weight: bold; font-size: 10px; }
+        .toggle-btn:hover { text-decoration: underline; }
+        .toggle-icon { font-size: 10px; margin-left: 2px; }
+
+        .public-detail-row { display: none; background: #fafafa; }
+        .public-detail-row.open { display: table-row; }
+
+        .public-detail-wrapper { padding: 8px 12px; display: flex; justify-content: flex-start; }
+        .public-detail-table { border-collapse: collapse; font-size: 9px; background: #fff8e1; border-radius: 6px; overflow: hidden; border: 1px solid #d4a800; }
+        .public-detail-table th { background: #ffd700; color: #333; padding: 4px 8px; text-align: center; border: 1px solid #d4a800; font-size: 8px; }
+        .public-detail-table td { padding: 3px 8px; border: 1px solid #d4a800; text-align: center; font-size: 8px; }
+        .public-detail-table .label-cell { font-weight: bold; background: #fff3cd; }
+        .public-detail-table .value-cell { background: #fff8e1; }
+
+        .empty-row { text-align: center; padding: 20px; color: #999; font-size: 13px; }
+        .status-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 8px; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-inactive { background: #f8d7da; color: #721c24; }
+        .status-renovation { background: #fff3cd; color: #856404; }
+
+        /* ===== 模态框样式 ===== */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; }
+        .modal-overlay.active { display: flex; align-items: center; justify-content: center; }
+        .modal-box { background: white; border-radius: 10px; width: 95%; max-width: 1100px; max-height: 95vh; overflow-y: auto; padding: 20px; margin: 20px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e3c72; padding-bottom: 12px; margin-bottom: 16px; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 16px; color: #1e3c72; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+        .modal-close:hover { color: #333; }
+
+        .modal-body { padding: 0 4px; }
+
+        .collapse-section { border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+        .collapse-header { display: flex; align-items: center; padding: 10px 16px; cursor: pointer; background: #f8f9fa; transition: background 0.2s; user-select: none; }
+        .collapse-header:hover { background: #e9ecef; }
+        .collapse-header .collapse-icon { font-size: 14px; margin-right: 10px; transition: transform 0.3s; }
+        .collapse-header .collapse-icon.collapsed { transform: rotate(-90deg); }
+        .collapse-header .collapse-title { font-size: 14px; font-weight: bold; }
+        .collapse-header .collapse-badge { font-size: 10px; color: #999; margin-left: 10px; }
+        .collapse-body { padding: 14px 16px; }
+        .collapse-body.collapsed { display: none; }
+
+        .section-title-yellow { color: #f57f17; }
+        .section-title-green { color: #2e7d32; }
+
+        .public-form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 11px; font-weight: bold; color: #333; margin-bottom: 3px; }
+        .form-group label .required { color: #dc3545; }
+        .form-group input, .form-group select { padding: 5px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; }
+        .form-group input:focus, .form-group select:focus { border-color: #2a5298; outline: none; }
+
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0; position: sticky; bottom: 0; background: white; z-index: 10; }
+
+        /* ===== 休息厅列表 ===== */
+        .lounge-list-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 10px; border-bottom: 2px solid #4caf50; margin-bottom: 14px; }
+        .lounge-list-header .title { font-size: 15px; font-weight: bold; color: #2e7d32; }
+        .btn-add-lounge { background: #4caf50; color: white; border: none; padding: 6px 18px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .btn-add-lounge:hover { background: #388e3c; }
+
+        .lounge-item { background: #f8f9fa; border: 2px solid #4caf50; border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
+        .lounge-item .lounge-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #c8e6c9; }
+        .lounge-item .lounge-header strong { font-size: 14px; color: #2e7d32; }
+        .btn-remove-lounge { background: #dc3545; color: white; border: none; padding: 3px 12px; border-radius: 3px; cursor: pointer; font-size: 10px; }
+        .btn-remove-lounge:hover { background: #c82333; }
+
+        .lounge-fields { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+        .lounge-fields > div { display: flex; flex-direction: column; }
+        .lounge-fields label { font-size: 10px; font-weight: bold; color: #2e7d32; margin-bottom: 4px; }
+        .lounge-fields input, .lounge-fields select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 10px; width: 100%; background: white; }
+        .lounge-fields input:focus, .lounge-fields select:focus { border-color: #4caf50; outline: none; box-shadow: 0 0 0 2px rgba(76,175,80,0.2); }
+
+        /* ===== 商务座候车区/商业候车区 表单 ===== */
+        .area-form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .area-form-grid .form-group { display: flex; flex-direction: column; }
+        .area-form-grid .form-group.full { grid-column: 1 / -1; }
+        .area-form-grid label { font-size: 11px; font-weight: bold; color: #333; margin-bottom: 3px; }
+        .area-form-grid label .required { color: #dc3545; }
+        .area-form-grid input, .area-form-grid select { padding: 5px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; }
+        .area-form-grid input:focus, .area-form-grid select:focus { border-color: #2a5298; outline: none; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 180px; }
+            .public-form-grid, .area-form-grid { grid-template-columns: 1fr; }
+            .lounge-fields { grid-template-columns: 1fr 1fr; }
+            .modal-box { width: 98%; padding: 12px; }
+            .tab-toolbar { flex-direction: column; align-items: stretch; }
+            .tab-toolbar .btn-group { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <div class="logo">🏢 铁路客服设备设施统计系统</div>
+    <div class="nav-menu">
+        <a href="/" class="nav-item active">客运站商务候车室管理</a>
+        <a href="/statistics" class="nav-item">客运站商务候车室统计</a>
+    </div>
+</div>
+
+<div class="app-container">
+    <div class="sidebar">
+        <div class="sidebar-header"><h3>🏢 组织机构</h3></div>
+        <div class="tree-container" id="treeContainer"><div style="text-align: center; padding: 20px;">加载中...</div></div>
+    </div>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2>客运站商务候车室管理</h2>
+            <p>当前选中：<span id="currentPathDisplay">国铁集团</span></p>
+        </div>
+
+        <div class="result-info">📊 共找到 <strong id="resultCount">0</strong> 个车站</div>
+
+        <!-- ===== 全局操作栏 ===== -->
+        <div class="global-toolbar">
+            <div class="btn-group">
+                <span class="group-label">📁 数据操作：</span>
+                <button class="btn btn-template btn-sm" onclick="downloadTemplate()">📄 下载模板</button>
+                <input type="file" id="excelUploadAll" accept=".xlsx,.xls" style="display:none" onchange="importExcel()">
+                <button class="btn btn-import btn-sm" onclick="document.getElementById('excelUploadAll').click()">📥 导入数据</button>
+                <button class="btn btn-export btn-sm" onclick="exportExcel()">📊 导出数据</button>
+            </div>
+            <div class="divider"></div>
+            <div class="btn-group">
+                <span style="font-size:11px;color:#999;">💡 导入导出包含全部三个工作表</span>
+            </div>
+        </div>
+
+        <div class="tab-container">
+            <button class="tab-btn active" data-tab="tab-business-waiting" onclick="switchTab('tab-business-waiting')">
+                🏛️ 商务候车室 <span class="badge" id="badge-business-waiting">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-business-class" onclick="switchTab('tab-business-class')">
+                💺 商务座候车区 <span class="badge" id="badge-business-class">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-commercial" onclick="switchTab('tab-commercial')">
+                🏪 商业候车区 <span class="badge" id="badge-commercial">0</span>
+            </button>
+        </div>
+
+        <!-- ==================== 页签1：商务候车室 ==================== -->
+        <div class="tab-content active" id="tab-business-waiting">
+            <div class="tab-toolbar" style="border-top:1px solid #e0e0e0;">
+                <div class="btn-group">
+                    <span class="group-label">📋 操作：</span>
+                    <button class="btn btn-success btn-sm" onclick="openAddRoom()">➕ 新增</button>
+                </div>
+            </div>
+            <div style="font-size:9px;color:#666;padding:4px 8px;background:#f8f9fa;border-bottom:1px solid #e0e0e0;">
+                🟡 <span style="color:#f57f17;font-weight:bold;">黄色背景</span> = 商务候车室公共属性（点击展开查看详情）&nbsp;|&nbsp;
+                🟢 <span style="color:#2e7d32;font-weight:bold;">绿色背景</span> = 休息厅明细数据
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table" id="tableBusinessWaiting">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">序号</th>
+                            <th rowspan="2">车站名称</th>
+                            <th rowspan="2">所属路局</th>
+                            <th rowspan="2">所属站段</th>
+                            <th rowspan="2">车站类别</th>
+                            <th rowspan="2" class="yellow-header" style="min-width:160px;">公共属性<br><span style="font-size:7px;font-weight:normal;">（点击展开▼）</span></th>
+                            <th colspan="18" class="green-header">休息厅明细</th>
+                            <th rowspan="2">操作</th>
+                        </tr>
+                        <tr>
+                            <th class="green-header">休息厅名称</th>
+                            <th class="green-header">权属主体</th>
+                            <th class="green-header">面积(㎡)</th>
+                            <th class="green-header">投资主体</th>
+                            <th class="green-header">资产办理</th>
+                            <th class="green-header">资产时间</th>
+                            <th class="green-header">装修出资</th>
+                            <th class="green-header">装修情况</th>
+                            <th class="green-header">装修移交</th>
+                            <th class="green-header">装修时间</th>
+                            <th class="green-header">家具出资</th>
+                            <th class="green-header">家具明细</th>
+                            <th class="green-header">家具移交</th>
+                            <th class="green-header">家具时间</th>
+                            <th class="green-header">功能调整</th>
+                            <th class="green-header">调整时间</th>
+                            <th class="green-header">独立卫生间</th>
+                            <th class="green-header">整改照片</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyBusinessWaiting">
+                        <tr><td colspan="27" style="text-align:center;padding:30px;color:#999;">请从左侧选择车站</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==================== 页签2：商务座候车区 ==================== -->
+        <div class="tab-content" id="tab-business-class">
+            <div class="tab-toolbar" style="border-top:1px solid #e0e0e0;">
+                <div class="btn-group">
+                    <span class="group-label">📋 操作：</span>
+                    <button class="btn btn-success btn-sm" onclick="openAddBusinessClass()">➕ 新增</button>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table" id="tableBusinessClass" style="min-width:1200px;">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>车站名称</th>
+                            <th>所属路局</th>
+                            <th>所属站段</th>
+                            <th>车站类别</th>
+                            <th>类型</th>
+                            <th>点位</th>
+                            <th>建设主体</th>
+                            <th>建成时间</th>
+                            <th>面积(㎡)</th>
+                            <th>装修出资主体</th>
+                            <th>运营模式</th>
+                            <th>业务外包企业名称</th>
+                            <th>休息间1面积</th>
+                            <th>休息间2面积</th>
+                            <th>休息间3面积</th>
+                            <th>独立进站通道</th>
+                            <th>安检检票验证</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyBusinessClass">
+                        <tr><td colspan="19" style="text-align:center;padding:30px;color:#999;">请从左侧选择车站</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==================== 页签3：商业候车区 ==================== -->
+        <div class="tab-content" id="tab-commercial">
+            <div class="tab-toolbar" style="border-top:1px solid #e0e0e0;">
+                <div class="btn-group">
+                    <span class="group-label">📋 操作：</span>
+                    <button class="btn btn-success btn-sm" onclick="openAddCommercial()">➕ 新增</button>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table" id="tableCommercial" style="min-width:1000px;">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>车站名称</th>
+                            <th>所属路局</th>
+                            <th>所属站段</th>
+                            <th>车站类别</th>
+                            <th>类型</th>
+                            <th>点位</th>
+                            <th>建设主体</th>
+                            <th>建成时间</th>
+                            <th>面积(㎡)</th>
+                            <th>装修出资主体</th>
+                            <th>业务外包企业名称</th>
+                            <th>营业状态</th>
+                            <th>是否有冠名</th>
+                            <th>冠名单位</th>
+                            <th>合同到期时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyCommercial">
+                        <tr><td colspan="17" style="text-align:center;padding:30px;color:#999;">请从左侧选择车站</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 模态框1：商务候车室 -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="modalRoom">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="modalRoomTitle">新增商务候车室</h3>
+            <button class="modal-close" onclick="closeModal('modalRoom')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="roomForm" onsubmit="saveRoom(event)">
+                <input type="hidden" id="editRoomId" value="">
+                <input type="hidden" id="editMode" value="add">
+
+                <div class="collapse-section">
+                    <div class="collapse-header" onclick="toggleCollapse('collapsePublic')">
+                        <span class="collapse-icon" id="collapsePublic_icon">▼</span>
+                        <span class="collapse-title section-title-yellow">🟡 商务候车室公共属性</span>
+                        <span class="collapse-badge">（点击折叠/展开）</span>
+                    </div>
+                    <div class="collapse-body" id="collapsePublic">
+                        <div class="public-form-grid">
+                            <div class="form-group">
+                                <label>位置 <span class="required">*</span></label>
+                                <input type="text" id="publicPosition" required placeholder="如：站房南侧一层">
+                            </div>
+                            <div class="form-group">
+                                <label>安检设备设施设置情况</label>
+                                <select id="publicCheckin">
+                                    <option value="">请选择</option>
+                                    <option value="1套">1套</option>
+                                    <option value="2套">2套</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>检验票设备设施设置情况</label>
+                                <select id="publicTicket">
+                                    <option value="">请选择</option>
+                                    <option value="门式闸机">门式闸机</option>
+                                    <option value="柱式闸机">柱式闸机</option>
+                                    <option value="手持终端">手持终端</option>
+                                    <option value="人工检票">人工检票</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>是否有独立站外通道</label>
+                                <select id="publicChannel">
+                                    <option value="是">是</option>
+                                    <option value="否">否</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>如何进入站台</label>
+                                <select id="publicPlatform">
+                                    <option value="">请选择</option>
+                                    <option value="通过候车大厅">通过候车大厅</option>
+                                    <option value="通过专用通道">通过专用通道</option>
+                                    <option value="通过站台楼梯">通过站台楼梯</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>是否能进入公共候车大厅</label>
+                                <select id="publicPublicHall">
+                                    <option value="是">是</option>
+                                    <option value="否">否</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>站外汽车专用落客通道情况</label>
+                                <select id="publicCarDropoff">
+                                    <option value="">请选择</option>
+                                    <option value="停靠落客平台">停靠落客平台</option>
+                                    <option value="专用落客通道">专用落客通道</option>
+                                    <option value="站前广场落客">站前广场落客</option>
+                                    <option value="无专用通道">无专用通道</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>是否有独立停车区</label>
+                                <select id="publicParking">
+                                    <option value="是">是</option>
+                                    <option value="否">否</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>停车位数</label>
+                                <input type="number" id="publicSpaces" placeholder="数字">
+                            </div>
+                            <div class="form-group">
+                                <label>营业时间</label>
+                                <input type="text" id="publicHours" placeholder="如：06:00-22:00">
+                            </div>
+                            <div class="form-group">
+                                <label>专职服务人员</label>
+                                <input type="number" id="publicStaff" placeholder="人数">
+                            </div>
+                            <div class="form-group">
+                                <label>联系电话</label>
+                                <input type="text" id="publicPhone" placeholder="区号+号码">
+                            </div>
+                            <div class="form-group">
+                                <label>是否有接待台</label>
+                                <select id="publicReception">
+                                    <option value="是">是</option>
+                                    <option value="否">否</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>卫生间设置数量</label>
+                                <select id="publicToiletCount">
+                                    <option value="">请选择</option>
+                                    <option value="0处">0处</option>
+                                    <option value="1处">1处</option>
+                                    <option value="2处">2处</option>
+                                    <option value="3处">3处</option>
+                                    <option value="4处">4处</option>
+                                    <option value="5处">5处</option>
+                                    <option value="6处">6处</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>是否有操作间</label>
+                                <select id="publicOperation">
+                                    <option value="是">是</option>
+                                    <option value="否">否</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="lounge-list-header">
+                        <span class="title">🟢 休息厅明细列表</span>
+                        <button type="button" class="btn-add-lounge" onclick="addLoungeField()">➕ 添加休息厅</button>
+                    </div>
+                    <div id="loungeContainer"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" onclick="closeModal('modalRoom')">取消</button>
+                    <button type="submit" class="btn btn-success">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 模态框2：商务座候车区 -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="modalBusinessClass">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="modalClassTitle">新增商务座候车区</h3>
+            <button class="modal-close" onclick="closeModal('modalBusinessClass')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="classForm" onsubmit="saveBusinessClass(event)">
+                <input type="hidden" id="editClassId" value="">
+                <input type="hidden" id="editClassMode" value="add">
+                <div class="area-form-grid">
+                    <div class="form-group full">
+                        <label>名称 <span class="required">*</span></label>
+                        <input type="text" id="className" required placeholder="如：商务座候车区1">
+                    </div>
+                    <div class="form-group">
+                        <label>类型 <span class="required">*</span></label>
+                        <select id="classType">
+                            <option value="高铁站">高铁站</option>
+                            <option value="高普混">高普混</option>
+                            <option value="普速站">普速站</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>点位 <span class="required">*</span></label>
+                        <input type="text" id="classLocation" required placeholder="如：A18检票口旁">
+                    </div>
+                    <div class="form-group">
+                        <label>建设主体</label>
+                        <select id="classConstruction">
+                            <option value="国铁">国铁</option>
+                            <option value="铁路局">铁路局</option>
+                            <option value="地方政府">地方政府</option>
+                            <option value="投资企业">投资企业</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>建成时间</label>
+                        <input type="date" id="classCompletion">
+                    </div>
+                    <div class="form-group">
+                        <label>面积(㎡)</label>
+                        <input type="number" id="classArea" placeholder="面积">
+                    </div>
+                    <div class="form-group">
+                        <label>装修出资主体</label>
+                        <select id="classDecoration">
+                            <option value="国铁">国铁</option>
+                            <option value="铁路局">铁路局</option>
+                            <option value="地方政府">地方政府</option>
+                            <option value="投资企业">投资企业</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>运营模式</label>
+                        <select id="classOperation">
+                            <option value="自营">自营</option>
+                            <option value="业务外包">业务外包</option>
+                            <option value="委托服务">委托服务</option>
+                            <option value="合作">合作</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>业务外包企业名称</label>
+                        <input type="text" id="classOutsource" placeholder="外包企业名称">
+                    </div>
+                    <div class="form-group">
+                        <label>内设休息间1面积</label>
+                        <input type="text" id="classLounge1" placeholder="面积">
+                    </div>
+                    <div class="form-group">
+                        <label>内设休息间2面积</label>
+                        <input type="text" id="classLounge2" placeholder="面积">
+                    </div>
+                    <div class="form-group">
+                        <label>内设休息间3面积</label>
+                        <input type="text" id="classLounge3" placeholder="面积">
+                    </div>
+                    <div class="form-group">
+                        <label>是否有独立进站通道</label>
+                        <select id="classChannel">
+                            <option value="是">是</option>
+                            <option value="否">否</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>安检检票验证</label>
+                        <input type="text" id="classVerify" placeholder="如：安检/检票/验证一体">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" onclick="closeModal('modalBusinessClass')">取消</button>
+                    <button type="submit" class="btn btn-success">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 模态框3：商业候车区 -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="modalCommercial">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="modalCommercialTitle">新增商业候车区</h3>
+            <button class="modal-close" onclick="closeModal('modalCommercial')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="commercialForm" onsubmit="saveCommercial(event)">
+                <input type="hidden" id="editCommercialId" value="">
+                <input type="hidden" id="editCommercialMode" value="add">
+                <div class="area-form-grid">
+                    <div class="form-group full">
+                        <label>名称 <span class="required">*</span></label>
+                        <input type="text" id="commercialName" required placeholder="如：商业候车室">
+                    </div>
+                    <div class="form-group">
+                        <label>类型 <span class="required">*</span></label>
+                        <select id="commercialType">
+                            <option value="高铁站">高铁站</option>
+                            <option value="高普混">高普混</option>
+                            <option value="普速站">普速站</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>点位 <span class="required">*</span></label>
+                        <input type="text" id="commercialLocation" required placeholder="如：候车大厅东侧">
+                    </div>
+                    <div class="form-group">
+                        <label>建设主体</label>
+                        <select id="commercialConstruction">
+                            <option value="国铁">国铁</option>
+                            <option value="铁路局">铁路局</option>
+                            <option value="地方政府">地方政府</option>
+                            <option value="投资企业">投资企业</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>建成时间</label>
+                        <input type="date" id="commercialCompletion">
+                    </div>
+                    <div class="form-group">
+                        <label>面积(㎡)</label>
+                        <input type="number" id="commercialArea" placeholder="面积">
+                    </div>
+                    <div class="form-group">
+                        <label>装修出资主体</label>
+                        <select id="commercialDecoration">
+                            <option value="国铁">国铁</option>
+                            <option value="铁路局">铁路局</option>
+                            <option value="地方政府">地方政府</option>
+                            <option value="投资企业">投资企业</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>业务外包企业名称</label>
+                        <input type="text" id="commercialOutsource" placeholder="外包企业名称">
+                    </div>
+                    <div class="form-group">
+                        <label>营业状态</label>
+                        <select id="commercialStatus">
+                            <option value="营业">营业</option>
+                            <option value="停业">停业</option>
+                            <option value="改建">改建</option>
+                            <option value="新建">新建</option>
+                            <option value="暂停">暂停</option>
+                            <option value="未启用">未启用</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>是否有冠名</label>
+                        <select id="commercialNaming">
+                            <option value="是">是</option>
+                            <option value="否">否</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>冠名单位</label>
+                        <input type="text" id="commercialNamingUnit" placeholder="冠名单位名称">
+                    </div>
+                    <div class="form-group">
+                        <label>合同到期时间</label>
+                        <input type="date" id="commercialContractEnd">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" onclick="closeModal('modalCommercial')">取消</button>
+                    <button type="submit" class="btn btn-success">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let treeData = {};
+    let currentSelectedType = 'railway';
+    let currentSelectedName = '国铁集团';
+    let currentSelectedPath = [];
+    let currentStations = [];
+    let loungeCounter = 0;
+
+    // ===== 等级显示 =====
+    function getLevelDisplay(level) {
+        if (level === '特等站' || level === '一级' || level === '一等站') return '<span class="level-tag level-1">一级</span>';
+        if (level === '二等站') return '<span class="level-tag level-3">三级</span>';
+        if (level === '三等站') return '<span class="level-tag level-4">四级</span>';
+        return '<span class="level-tag level-default">' + (level || '-') + '</span>';
+    }
+
+    // ===== 折叠功能 =====
+    function toggleCollapse(id) {
+        const body = document.getElementById(id);
+        const icon = document.getElementById(id + '_icon');
+        if (body) {
+            body.classList.toggle('collapsed');
+            if (icon) icon.classList.toggle('collapsed');
+        }
+    }
+
+    // ===== 树形结构 =====
+    async function loadTreeData() {
+        const response = await fetch('/api/get_tree_data');
+        treeData = await response.json();
+        renderTree();
+        selectNode('railway', '国铁集团', ['国铁集团']);
+    }
+
+    function renderTree() {
+        const container = document.getElementById('treeContainer');
+        container.innerHTML = '';
+        for (let railway in treeData) {
+            const railwayNode = createTreeNode(railway, '🏢', 'railway', getStationCount(railway, null, null));
+            const railwayChildren = document.createElement('div');
+            railwayChildren.className = 'tree-children';
+            for (let bureau in treeData[railway]) {
+                const bureauNode = createTreeNode(bureau, '🏛️', 'bureau', getStationCount(railway, bureau, null));
+                const bureauChildren = document.createElement('div');
+                bureauChildren.className = 'tree-children';
+                for (let section in treeData[railway][bureau]) {
+                    const sectionNode = createTreeNode(section, '📁', 'section', getStationCount(railway, bureau, section));
+                    const sectionChildren = document.createElement('div');
+                    sectionChildren.className = 'tree-children';
+                    for (let station in treeData[railway][bureau][section]) {
+                        const stationNode = createTreeNode(station, '🚉', 'station', 0);
+                        stationNode.onclick = (function(r, b, s, st) {
+                            return function(e) {
+                                e.stopPropagation();
+                                selectNode('station', st, [r, b, s, st]);
+                            };
+                        })(railway, bureau, section, station);
+                        sectionChildren.appendChild(stationNode);
+                    }
+                    sectionNode.appendChild(sectionChildren);
+                    sectionNode.onclick = (function(r, b, s) {
+                        return function(e) {
+                            e.stopPropagation();
+                            toggleTreeNodeChildren(sectionNode);
+                            selectNode('section', s, [r, b, s]);
+                        };
+                    })(railway, bureau, section);
+                    bureauChildren.appendChild(sectionNode);
+                }
+                bureauNode.appendChild(bureauChildren);
+                bureauNode.onclick = (function(r, b) {
+                    return function(e) {
+                        e.stopPropagation();
+                        toggleTreeNodeChildren(bureauNode);
+                        selectNode('bureau', b, [r, b]);
+                    };
+                })(railway, bureau);
+                railwayChildren.appendChild(bureauNode);
+            }
+            railwayNode.appendChild(railwayChildren);
+            railwayNode.onclick = (function(r) {
+                return function(e) {
+                    e.stopPropagation();
+                    toggleTreeNodeChildren(railwayNode);
+                    selectNode('railway', r, [r]);
+                };
+            })(railway);
+            container.appendChild(railwayNode);
+        }
+    }
+
+    function toggleTreeNodeChildren(node) {
+        const children = node.querySelector('.tree-children');
+        if (children) children.classList.toggle('open');
+    }
+
+    function getStationCount(railway, bureau, section) {
+        let count = 0;
+        if (bureau === null) {
+            for (let b in treeData[railway]) {
+                for (let s in treeData[railway][b]) {
+                    count += Object.keys(treeData[railway][b][s]).length;
+                }
+            }
+        } else if (section === null) {
+            for (let s in treeData[railway][bureau]) {
+                count += Object.keys(treeData[railway][bureau][s]).length;
+            }
+        } else {
+            count = Object.keys(treeData[railway][bureau][section]).length;
+        }
+        return count;
+    }
+
+    function createTreeNode(name, icon, type, count) {
+        const div = document.createElement('div');
+        div.className = 'tree-node';
+        div.innerHTML = `<div class="tree-node-header" data-type="${type}" data-name="${name}">
+            <span class="tree-icon">${icon}</span>
+            <span class="node-name">${name}</span>
+            ${count > 0 ? `<span class="node-count">(${count})</span>` : ''}
+        </div>`;
+        return div;
+    }
+
+    function selectNode(type, name, path) {
+        document.querySelectorAll('.tree-node-header').forEach(n => n.classList.remove('selected'));
+        const nodes = document.querySelectorAll('.tree-node-header');
+        for (let node of nodes) {
+            if (node.querySelector('.node-name')?.innerText === name) {
+                node.classList.add('selected');
+                break;
+            }
+        }
+        currentSelectedType = type;
+        currentSelectedName = name;
+        currentSelectedPath = path;
+        document.getElementById('currentPathDisplay').innerHTML = path.join(' / ');
+        loadStationsByPath(path, type);
+    }
+
+    // ===== 加载车站数据 =====
+    async function loadStationsByPath(path, type) {
+        let stations = [];
+        if (type === 'railway') {
+            const railway = path[0];
+            for (let bureau in treeData[railway]) {
+                for (let section in treeData[railway][bureau]) {
+                    for (let station in treeData[railway][bureau][section]) {
+                        stations.push({ railway, bureau, section, station });
+                    }
+                }
+            }
+        } else if (type === 'bureau') {
+            const railway = path[0];
+            const bureau = path[1];
+            for (let section in treeData[railway][bureau]) {
+                for (let station in treeData[railway][bureau][section]) {
+                    stations.push({ railway, bureau, section, station });
+                }
+            }
+        } else if (type === 'section') {
+            const railway = path[0];
+            const bureau = path[1];
+            const section = path[2];
+            for (let station in treeData[railway][bureau][section]) {
+                stations.push({ railway, bureau, section, station });
+            }
+        } else {
+            stations.push({ railway: path[0], bureau: path[1], section: path[2], station: path[3] });
+        }
+        currentStations = stations;
+        document.getElementById('resultCount').innerText = stations.length;
+        await renderAllTabs(stations);
+    }
+
+    // ===== 构建公共属性展开表格 =====
+    function buildPublicDetailHtml(publicData) {
+        const fields = [
+            {label: '位置', value: publicData.position},
+            {label: '安检设备', value: publicData.checkin_equipment},
+            {label: '检票设备', value: publicData.ticket_check_equipment},
+            {label: '独立站外通道', value: publicData.has_independent_channel},
+            {label: '进站台方式', value: publicData.platform_access},
+            {label: '入公共大厅', value: publicData.can_access_public_hall},
+            {label: '落客通道', value: publicData.car_dropoff},
+            {label: '独立停车区', value: publicData.has_independent_parking},
+            {label: '停车位数', value: publicData.parking_spaces},
+            {label: '营业时间', value: publicData.business_hours},
+            {label: '服务人员', value: publicData.dedicated_staff},
+            {label: '联系电话', value: publicData.contact_phone},
+            {label: '接待台', value: publicData.has_reception_desk},
+            {label: '卫生间数', value: publicData.toilet_count},
+            {label: '操作间', value: publicData.has_operation_room},
+            {label: '平面图', value: publicData.floor_plan}
+        ];
+        let html = '<div class="public-detail-wrapper"><table class="public-detail-table">';
+        html += '<tr><th colspan="4" style="background:#ffd700;color:#333;padding:4px 12px;">🟡 商务候车室公共属性</th></tr>';
+        let cols = 0;
+        for (let f of fields) {
+            if (cols === 0) html += '<tr>';
+            html += `<td class="label-cell" style="padding:3px 10px;font-weight:bold;">${f.label}</td>`;
+            html += `<td class="value-cell" style="padding:3px 10px;">${f.value || '-'}</td>`;
+            cols++;
+            if (cols === 2) { html += '</tr>'; cols = 0; }
+        }
+        if (cols > 0) { while (cols < 2) { html += '<td style="border:1px solid #d4a800;"></td>'; cols++; } html += '</tr>'; }
+        html += '</table></div>';
+        return html;
+    }
+
+    // ===== 渲染所有页签 =====
+    async function renderAllTabs(stations) {
+        let bwCount = 0, bcCount = 0, comCount = 0;
+        let bwHtml = '', bcHtml = '', comHtml = '';
+        let seq1 = 1, seq2 = 1, seq3 = 1;
+
+        for (let s of stations) {
+            const resp = await fetch(`/api/get_station_data?railway=${encodeURIComponent(s.railway)}&bureau=${encodeURIComponent(s.bureau)}&section=${encodeURIComponent(s.section)}&station=${encodeURIComponent(s.station)}`);
+            const data = await resp.json();
+            const basic = data.basic_info || {};
+            const levelDisplay = getLevelDisplay(basic.车站类别 || basic.车站等级 || '-');
+
+            // ===== 商务候车室 =====
+            const waitingRooms = data.business_waiting_rooms || [];
+            for (let wr of waitingRooms) {
+                bwCount++;
+                const publicData = wr.public || {};
+                const lounges = wr.lounges || [];
+                const rowId = 'bw_' + seq1;
+                const loungeCount = lounges.length;
+
+                const publicSummary = [
+                    publicData.position ? '📍' + publicData.position : '',
+                    publicData.checkin_equipment ? '安检:' + publicData.checkin_equipment : '',
+                    publicData.ticket_check_equipment ? '检票:' + publicData.ticket_check_equipment : '',
+                    publicData.business_hours ? '⏰' + publicData.business_hours : '',
+                    publicData.contact_phone ? '📞' + publicData.contact_phone : ''
+                ].filter(Boolean).join(' | ');
+
+                if (loungeCount === 0) {
+                    bwHtml += `<tr>
+                        <td class="seq-column">${seq1}</td>
+                        <td><strong>${s.station}</strong></td>
+                        <td>${s.bureau}</td>
+                        <td>${s.section}</td>
+                        <td>${levelDisplay}</td>
+                        <td class="yellow-bg" style="text-align:left;font-size:8px;cursor:pointer;" onclick="togglePublicDetail('${rowId}')">
+                            <span style="font-weight:bold;color:#2a5298;">📋 点击展开查看详情</span>
+                            <div style="font-size:7px;color:#666;margin-top:2px;">${publicSummary || '（暂无属性）'}</div>
+                        </td>
+                        <td colspan="18" style="color:#999;font-style:italic;">（暂无休息厅明细）</td>
+                        <td>
+                            <button class="btn btn-warning btn-xs" onclick="editRoom(${wr.id})">✏️</button>
+                            <button class="btn btn-danger btn-xs" onclick="deleteRoom(${wr.id})">🗑️</button>
+                        </td>
+                    </tr>
+                    <tr class="public-detail-row" id="${rowId}_detail">
+                        <td colspan="27" style="padding:4px 0;background:#fafafa;">
+                            ${buildPublicDetailHtml(publicData)}
+                        </td>
+                    </tr>`;
+                    seq1++;
+                } else {
+                    const firstLounge = lounges[0];
+                    bwHtml += `<tr>
+                        <td class="seq-column" rowspan="${loungeCount}">${seq1}</td>
+                        <td rowspan="${loungeCount}"><strong>${s.station}</strong></td>
+                        <td rowspan="${loungeCount}">${s.bureau}</td>
+                        <td rowspan="${loungeCount}">${s.section}</td>
+                        <td rowspan="${loungeCount}">${levelDisplay}</td>
+                        <td class="yellow-bg" rowspan="${loungeCount}" style="text-align:left;font-size:8px;cursor:pointer;" onclick="togglePublicDetail('${rowId}')">
+                            <span style="font-weight:bold;color:#2a5298;">📋 点击展开查看详情</span>
+                            <div style="font-size:7px;color:#666;margin-top:2px;">${publicSummary || '（暂无属性）'}</div>
+                        </td>
+                        <td class="green-bg"><strong>${firstLounge.name || '-'}</strong></td>
+                        <td class="green-bg">${firstLounge.ownership || '-'}</td>
+                        <td class="green-bg">${firstLounge.area || '-'}</td>
+                        <td class="green-bg">${firstLounge.investment || '-'}</td>
+                        <td class="green-bg">${firstLounge.asset_status || '-'}</td>
+                        <td class="green-bg">${firstLounge.asset_date || '-'}</td>
+                        <td class="green-bg">${firstLounge.decoration_investment || '-'}</td>
+                        <td class="green-bg">${firstLounge.decoration_items || '-'}</td>
+                        <td class="green-bg">${firstLounge.decoration_transfer || '-'}</td>
+                        <td class="green-bg">${firstLounge.decoration_date || '-'}</td>
+                        <td class="green-bg">${firstLounge.furniture_investment || '-'}</td>
+                        <td class="green-bg">${firstLounge.furniture_items || '-'}</td>
+                        <td class="green-bg">${firstLounge.furniture_transfer || '-'}</td>
+                        <td class="green-bg">${firstLounge.furniture_date || '-'}</td>
+                        <td class="green-bg">${firstLounge.function_adjust || '-'}</td>
+                        <td class="green-bg">${firstLounge.adjust_date || '-'}</td>
+                        <td class="green-bg">${firstLounge.has_independent_toilet || '-'}</td>
+                        <td class="green-bg">${firstLounge.photo ? '📷' : '-'}</td>
+                        <td rowspan="${loungeCount}">
+                            <button class="btn btn-warning btn-xs" onclick="editRoom(${wr.id})">✏️</button>
+                            <button class="btn btn-danger btn-xs" onclick="deleteRoom(${wr.id})">🗑️</button>
+                        </td>
+                    </tr>`;
+
+                    for (let i = 1; i < loungeCount; i++) {
+                        const lounge = lounges[i];
+                        bwHtml += `<tr>
+                            <td class="green-bg"><strong>${lounge.name || '-'}</strong></td>
+                            <td class="green-bg">${lounge.ownership || '-'}</td>
+                            <td class="green-bg">${lounge.area || '-'}</td>
+                            <td class="green-bg">${lounge.investment || '-'}</td>
+                            <td class="green-bg">${lounge.asset_status || '-'}</td>
+                            <td class="green-bg">${lounge.asset_date || '-'}</td>
+                            <td class="green-bg">${lounge.decoration_investment || '-'}</td>
+                            <td class="green-bg">${lounge.decoration_items || '-'}</td>
+                            <td class="green-bg">${lounge.decoration_transfer || '-'}</td>
+                            <td class="green-bg">${lounge.decoration_date || '-'}</td>
+                            <td class="green-bg">${lounge.furniture_investment || '-'}</td>
+                            <td class="green-bg">${lounge.furniture_items || '-'}</td>
+                            <td class="green-bg">${lounge.furniture_transfer || '-'}</td>
+                            <td class="green-bg">${lounge.furniture_date || '-'}</td>
+                            <td class="green-bg">${lounge.function_adjust || '-'}</td>
+                            <td class="green-bg">${lounge.adjust_date || '-'}</td>
+                            <td class="green-bg">${lounge.has_independent_toilet || '-'}</td>
+                            <td class="green-bg">${lounge.photo ? '📷' : '-'}</td>
+                        </tr>`;
+                    }
+
+                    bwHtml += `<tr class="public-detail-row" id="${rowId}_detail">
+                        <td colspan="27" style="padding:4px 0;background:#fafafa;">
+                            ${buildPublicDetailHtml(publicData)}
+                        </td>
+                    </tr>`;
+                    seq1++;
+                }
+            }
+
+            // ===== 商务座候车区 =====
+            const classAreas = data.business_class_areas || [];
+            for (let area of classAreas) {
+                bcCount++;
+                const statusClass = area.operation_mode === '自营' ? 'status-active' : 'status-inactive';
+                bcHtml += `<tr>
+                    <td>${seq2++}</td>
+                    <td><strong>${s.station}</strong></td>
+                    <td>${s.bureau}</td>
+                    <td>${s.section}</td>
+                    <td>${levelDisplay}</td>
+                    <td>${area.type || '-'}</td>
+                    <td style="text-align:left;font-size:7px;">${area.location || '-'}</td>
+                    <td>${area.construction_entity || '-'}</td>
+                    <td>${area.completion_time || '-'}</td>
+                    <td>${area.area || '-'}</td>
+                    <td>${area.decoration_investment || '-'}</td>
+                    <td><span class="status-badge ${statusClass}">${area.operation_mode || '-'}</span></td>
+                    <td>${area.outsource_company || '-'}</td>
+                    <td>${area.lounge1_area || '-'}</td>
+                    <td>${area.lounge2_area || '-'}</td>
+                    <td>${area.lounge3_area || '-'}</td>
+                    <td>${area.has_independent_channel || '-'}</td>
+                    <td>${area.checkin_ticket_verify || '-'}</td>
+                    <td>
+                        <button class="btn btn-warning btn-xs" onclick="editBusinessClass(${area.id})">✏️</button>
+                        <button class="btn btn-danger btn-xs" onclick="deleteBusinessClass(${area.id})">🗑️</button>
+                    </td>
+                </tr>`;
+            }
+
+            // ===== 商业候车区 =====
+            const commercialAreas = data.commercial_waiting_areas || [];
+            for (let area of commercialAreas) {
+                comCount++;
+                const statusClass = area.operation_status === '营业' ? 'status-active' : 'status-inactive';
+                comHtml += `<tr>
+                    <td>${seq3++}</td>
+                    <td><strong>${s.station}</strong></td>
+                    <td>${s.bureau}</td>
+                    <td>${s.section}</td>
+                    <td>${levelDisplay}</td>
+                    <td>${area.type || '-'}</td>
+                    <td style="text-align:left;font-size:7px;">${area.location || '-'}</td>
+                    <td>${area.construction_entity || '-'}</td>
+                    <td>${area.completion_time || '-'}</td>
+                    <td>${area.area || '-'}</td>
+                    <td>${area.decoration_investment || '-'}</td>
+                    <td>${area.outsource_company || '-'}</td>
+                    <td><span class="status-badge ${statusClass}">${area.operation_status || '-'}</span></td>
+                    <td>${area.has_naming || '-'}</td>
+                    <td>${area.naming_unit || '-'}</td>
+                    <td>${area.contract_end_date || '-'}</td>
+                    <td>
+                        <button class="btn btn-warning btn-xs" onclick="editCommercial(${area.id})">✏️</button>
+                        <button class="btn btn-danger btn-xs" onclick="deleteCommercial(${area.id})">🗑️</button>
+                    </td>
+                </tr>`;
+            }
+        }
+
+        document.getElementById('badge-business-waiting').textContent = bwCount;
+        document.getElementById('badge-business-class').textContent = bcCount;
+        document.getElementById('badge-commercial').textContent = comCount;
+
+        document.getElementById('tbodyBusinessWaiting').innerHTML = bwCount > 0 ? bwHtml : '<tr><td colspan="27" style="text-align:center;padding:30px;color:#999;">暂无商务候车室数据</td></tr>';
+        document.getElementById('tbodyBusinessClass').innerHTML = bcCount > 0 ? bcHtml : '<tr><td colspan="19" style="text-align:center;padding:30px;color:#999;">暂无商务座候车区数据</td></tr>';
+        document.getElementById('tbodyCommercial').innerHTML = comCount > 0 ? comHtml : '<tr><td colspan="17" style="text-align:center;padding:30px;color:#999;">暂无商业候车区数据</td></tr>';
+    }
+
+    // ===== 展开/收起公共属性 =====
+    function togglePublicDetail(rowId) {
+        const el = document.getElementById(rowId + '_detail');
+        if (el) el.classList.toggle('open');
+    }
+
+    // ===== 页签切换 =====
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+    }
+
+    // ===== 模态框操作 =====
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.add('active');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+
+    // ============================================================
+    // 商务候车室 CRUD
+    // ============================================================
+    function openAddRoom() {
+        if (currentStations.length === 0) {
+            alert('请先从左侧选择一个车站');
+            return;
+        }
+        document.getElementById('editMode').value = 'add';
+        document.getElementById('editRoomId').value = '';
+        document.getElementById('roomForm').reset();
+        document.getElementById('loungeContainer').innerHTML = '';
+        loungeCounter = 0;
+        document.getElementById('modalRoomTitle').textContent = '新增商务候车室';
+        document.getElementById('collapsePublic').classList.remove('collapsed');
+        document.getElementById('collapsePublic_icon').classList.remove('collapsed');
+        openModal('modalRoom');
+    }
+
+    async function editRoom(roomId) {
+        if (currentStations.length === 0) {
+            alert('请先从左侧选择一个车站');
+            return;
+        }
+        const s = currentStations[0];
+        const resp = await fetch(`/api/get_station_data?railway=${encodeURIComponent(s.railway)}&bureau=${encodeURIComponent(s.bureau)}&section=${encodeURIComponent(s.section)}&station=${encodeURIComponent(s.station)}`);
+        const data = await resp.json();
+        const room = data.business_waiting_rooms.find(r => r.id === roomId);
+        if (!room) {
+            alert('未找到该商务候车室');
+            return;
+        }
+
+        const pub = room.public || {};
+        document.getElementById('editMode').value = 'edit';
+        document.getElementById('editRoomId').value = roomId;
+        document.getElementById('publicPosition').value = pub.position || '';
+        document.getElementById('publicCheckin').value = pub.checkin_equipment || '';
+        document.getElementById('publicTicket').value = pub.ticket_check_equipment || '';
+        document.getElementById('publicChannel').value = pub.has_independent_channel || '是';
+        document.getElementById('publicPlatform').value = pub.platform_access || '';
+        document.getElementById('publicPublicHall').value = pub.can_access_public_hall || '是';
+        document.getElementById('publicCarDropoff').value = pub.car_dropoff || '';
+        document.getElementById('publicParking').value = pub.has_independent_parking || '是';
+        document.getElementById('publicSpaces').value = pub.parking_spaces || '';
+        document.getElementById('publicHours').value = pub.business_hours || '';
+        document.getElementById('publicStaff').value = pub.dedicated_staff || '';
+        document.getElementById('publicPhone').value = pub.contact_phone || '';
+        document.getElementById('publicReception').value = pub.has_reception_desk || '是';
+        document.getElementById('publicToiletCount').value = pub.toilet_count || '';
+        document.getElementById('publicOperation').value = pub.has_operation_room || '是';
+
+        document.getElementById('loungeContainer').innerHTML = '';
+        loungeCounter = 0;
+        if (room.lounges && room.lounges.length > 0) {
+            for (let lounge of room.lounges) {
+                addLoungeField(lounge);
+            }
+        }
+
+        document.getElementById('modalRoomTitle').textContent = '编辑商务候车室';
+        document.getElementById('collapsePublic').classList.remove('collapsed');
+        document.getElementById('collapsePublic_icon').classList.remove('collapsed');
+        openModal('modalRoom');
+    }
+
+    async function deleteRoom(roomId) {
+        if (!confirm('确定要删除该商务候车室吗？（关联的休息厅也将被删除）')) return;
+        if (currentStations.length === 0) return;
+        const s = currentStations[0];
+        try {
+            const resp = await fetch(`/api/business_waiting_room/${roomId}`, {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ railway: s.railway, bureau: s.bureau, section: s.section, station: s.station })
+            });
+            const result = await resp.json();
+            if (result.status === 'success') {
+                alert('删除成功');
+                loadStationsByPath(currentSelectedPath, currentSelectedType);
+            } else {
+                alert('删除失败：' + (result.message || '未知错误'));
+            }
+        } catch (e) {
+            alert('删除失败：' + e.message);
+        }
+    }
+
+    async function saveRoom(event) {
+        event.preventDefault();
+        if (currentStations.length === 0) {
+            alert('请先从左侧选择一个车站');
+            return;
+        }
+        const s = currentStations[0];
+
+        const publicData = {
+            position: document.getElementById('publicPosition').value,
+            checkin_equipment: document.getElementById('publicCheckin').value,
+            ticket_check_equipment: document.getElementById('publicTicket').value,
+            has_independent_channel: document.getElementById('publicChannel').value,
+            platform_access: document.getElementById('publicPlatform').value,
+            can_access_public_hall: document.getElementById('publicPublicHall').value,
+            car_dropoff: document.getElementById('publicCarDropoff').value,
+            has_independent_parking: document.getElementById('publicParking').value,
+            parking_spaces: document.getElementById('publicSpaces').value,
+            business_hours: document.getElementById('publicHours').value,
+            dedicated_staff: document.getElementById('publicStaff').value,
+            contact_phone: document.getElementById('publicPhone').value,
+            has_reception_desk: document.getElementById('publicReception').value,
+            toilet_count: document.getElementById('publicToiletCount').value,
+            has_operation_room: document.getElementById('publicOperation').value,
+            floor_plan: ''
+        };
+
+        const loungeItems = document.querySelectorAll('.lounge-item');
+        const lounges = [];
+        loungeItems.forEach(el => {
+            const id = parseInt(el.dataset.id) || 0;
+            lounges.push({
+                id: id,
+                name: el.querySelector('.lounge-name')?.value || '',
+                ownership: el.querySelector('.lounge-ownership')?.value || '',
+                area: el.querySelector('.lounge-area')?.value || '',
+                investment: el.querySelector('.lounge-investment')?.value || '',
+                asset_status: el.querySelector('.lounge-asset-status')?.value || '',
+                asset_date: el.querySelector('.lounge-asset-date')?.value || '',
+                decoration_investment: el.querySelector('.lounge-dec-investment')?.value || '',
+                decoration_items: el.querySelector('.lounge-dec-items')?.value || '',
+                decoration_transfer: el.querySelector('.lounge-dec-transfer')?.value || '',
+                decoration_date: el.querySelector('.lounge-dec-date')?.value || '',
+                furniture_investment: el.querySelector('.lounge-fur-investment')?.value || '',
+                furniture_items: el.querySelector('.lounge-fur-items')?.value || '',
+                furniture_transfer: el.querySelector('.lounge-fur-transfer')?.value || '',
+                furniture_date: el.querySelector('.lounge-fur-date')?.value || '',
+                function_adjust: el.querySelector('.lounge-function')?.value || '',
+                adjust_date: el.querySelector('.lounge-adjust-date')?.value || '',
+                has_independent_toilet: el.querySelector('.lounge-toilet')?.value || '是',
+                photo: ''
+            });
+        });
+
+        const roomData = { public: publicData, lounges: lounges };
+        const mode = document.getElementById('editMode').value;
+        const roomId = document.getElementById('editRoomId').value;
+        const url = mode === 'edit' ? `/api/business_waiting_room/${roomId}` : '/api/business_waiting_room/add';
+        const method = mode === 'edit' ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    railway: s.railway, bureau: s.bureau, section: s.section, station: s.station,
+                    room: roomData
+                })
+            });
+            const result = await resp.json();
+            if (result.status === 'success') {
+                alert(mode === 'edit' ? '更新成功' : '新增成功');
+                closeModal('modalRoom');
+                loadStationsByPath(currentSelectedPath, currentSelectedType);
+            } else {
+                alert('保存失败：' + (result.message || '未知错误'));
+            }
+        } catch (e) {
+            alert('保存失败：' + e.message);
+        }
+    }
+
+    function addLoungeField(loungeData) {
+        loungeCounter++;
+        const container = document.getElementById('loungeContainer');
+        const div = document.createElement('div');
+        div.className = 'lounge-item';
+        div.dataset.id = loungeData?.id || 0;
+        div.innerHTML = `
+            <div class="lounge-header">
+                <strong>🟢 休息厅 #${loungeCounter}</strong>
+                <button type="button" class="btn-remove-lounge" onclick="this.closest('.lounge-item').remove()">✕ 移除</button>
+            </div>
+            <div class="lounge-fields">
+                <div><label>名称</label><input class="lounge-name" type="text" value="${loungeData?.name || ''}" placeholder="休息厅名称"></div>
+                <div><label>权属主体</label><input class="lounge-ownership" type="text" value="${loungeData?.ownership || ''}" placeholder="权属主体"></div>
+                <div><label>面积(㎡)</label><input class="lounge-area" type="text" value="${loungeData?.area || ''}" placeholder="面积"></div>
+                <div><label>投资主体</label><input class="lounge-investment" type="text" value="${loungeData?.investment || ''}" placeholder="投资主体"></div>
+                <div><label>资产办理</label>
+                    <select class="lounge-asset-status">
+                        <option value="">请选择</option>
+                        <option value="已移交铁路局集团公司无偿使用" ${loungeData?.asset_status === '已移交铁路局集团公司无偿使用' ? 'selected' : ''}>已移交铁路局集团公司无偿使用</option>
+                        <option value="XX站与XX政府、企业协商，按无偿使用处理" ${loungeData?.asset_status === 'XX站与XX政府、企业协商，按无偿使用处理' ? 'selected' : ''}>XX站与XX政府、企业协商，按无偿使用处理</option>
+                        <option value="XX政府、企业自行处置" ${loungeData?.asset_status === 'XX政府、企业自行处置' ? 'selected' : ''}>XX政府、企业自行处置</option>
+                    </select>
+                </div>
+                <div><label>资产时间</label><input class="lounge-asset-date" type="date" value="${loungeData?.asset_date || ''}"></div>
+                <div><label>装修出资</label><input class="lounge-dec-investment" type="text" value="${loungeData?.decoration_investment || ''}" placeholder="装修出资主体"></div>
+                <div><label>装修情况</label><input class="lounge-dec-items" type="text" value="${loungeData?.decoration_items || ''}" placeholder="装修情况"></div>
+                <div><label>装修移交</label>
+                    <select class="lounge-dec-transfer">
+                        <option value="">请选择</option>
+                        <option value="无偿移交" ${loungeData?.decoration_transfer === '无偿移交' ? 'selected' : ''}>无偿移交</option>
+                        <option value="有偿移交" ${loungeData?.decoration_transfer === '有偿移交' ? 'selected' : ''}>有偿移交</option>
+                        <option value="投资方回收处置" ${loungeData?.decoration_transfer === '投资方回收处置' ? 'selected' : ''}>投资方回收处置</option>
+                        <option value="超标准装饰投资方回收处置" ${loungeData?.decoration_transfer === '超标准装饰投资方回收处置' ? 'selected' : ''}>超标准装饰投资方回收处置</option>
+                        <option value="其他可移动资产投资方回收处置" ${loungeData?.decoration_transfer === '其他可移动资产投资方回收处置' ? 'selected' : ''}>其他可移动资产投资方回收处置</option>
+                        <option value="协商中" ${loungeData?.decoration_transfer === '协商中' ? 'selected' : ''}>协商中</option>
+                    </select>
+                </div>
+                <div><label>装修时间</label><input class="lounge-dec-date" type="date" value="${loungeData?.decoration_date || ''}"></div>
+                <div><label>家具出资</label><input class="lounge-fur-investment" type="text" value="${loungeData?.furniture_investment || ''}" placeholder="家具出资主体"></div>
+                <div><label>家具明细</label><input class="lounge-fur-items" type="text" value="${loungeData?.furniture_items || ''}" placeholder="家具明细"></div>
+                <div><label>家具移交</label>
+                    <select class="lounge-fur-transfer">
+                        <option value="">请选择</option>
+                        <option value="超标准装饰（家具），投资方回收处置" ${loungeData?.furniture_transfer === '超标准装饰（家具），投资方回收处置' ? 'selected' : ''}>超标准装饰（家具），投资方回收处置</option>
+                        <option value="超标准装饰（家具），投资方按无偿使用交车站处理" ${loungeData?.furniture_transfer === '超标准装饰（家具），投资方按无偿使用交车站处理' ? 'selected' : ''}>超标准装饰（家具），投资方按无偿使用交车站处理</option>
+                        <option value="其他可移动资产，投资方回收处置" ${loungeData?.furniture_transfer === '其他可移动资产，投资方回收处置' ? 'selected' : ''}>其他可移动资产，投资方回收处置</option>
+                        <option value="其他可移动资产，投资方按无偿使用交车站处理" ${loungeData?.furniture_transfer === '其他可移动资产，投资方按无偿使用交车站处理' ? 'selected' : ''}>其他可移动资产，投资方按无偿使用交车站处理</option>
+                    </select>
+                </div>
+                <div><label>家具时间</label><input class="lounge-fur-date" type="date" value="${loungeData?.furniture_date || ''}"></div>
+                <div><label>功能调整</label>
+                    <select class="lounge-function">
+                        <option value="">请选择</option>
+                        <option value="调整为'礼遇行'经营用房" ${loungeData?.function_adjust === "调整为'礼遇行'经营用房" ? 'selected' : ''}>调整为'礼遇行'经营用房</option>
+                        <option value="调整为商务座候车区" ${loungeData?.function_adjust === '调整为商务座候车区' ? 'selected' : ''}>调整为商务座候车区</option>
+                        <option value="调整为'四区一室'（商务座候车区除外）服务用房" ${loungeData?.function_adjust === "调整为'四区一室'（商务座候车区除外）服务用房" ? 'selected' : ''}>调整为'四区一室'服务用房</option>
+                        <option value="调整为车站生产生活用房" ${loungeData?.function_adjust === '调整为车站生产生活用房' ? 'selected' : ''}>调整为车站生产生活用房</option>
+                        <option value="其他用房" ${loungeData?.function_adjust === '其他用房' ? 'selected' : ''}>其他用房</option>
+                    </select>
+                </div>
+                <div><label>调整时间</label><input class="lounge-adjust-date" type="date" value="${loungeData?.adjust_date || ''}"></div>
+                <div><label>独立卫生间</label>
+                    <select class="lounge-toilet">
+                        <option value="是" ${loungeData?.has_independent_toilet === '是' ? 'selected' : ''}>是</option>
+                        <option value="否" ${loungeData?.has_independent_toilet === '否' ? 'selected' : ''}>否</option>
+                    </select>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    }
+
+    // ============================================================
+    // 商务座候车区 CRUD
+    // ============================================================
+    function openAddBusinessClass() {
+        if (currentStations.length === 0) {
+            alert('请先从左侧选择一个车站');
+            return;
+        }
+        document.getElementById('editClassMode').value = 'add';
+        document.getElementById('editClassId').value = '';
+        document.getElementById('classForm').reset();
+        document.getElementById('modalClassTitle').textContent = '新增商务座候车区';
+        openModal('modalBusinessClass');
+    }
+
+    async function editBusinessClass(areaId) {
+        if (currentStations.length === 0) return;
+        const s = currentStations[0];
+        const resp = await fetch(`/api/get_station_data?railway=${encodeURIComponent(s.railway)}&bureau=${encodeURIComponent(s.bureau)}&section=${encodeURIComponent(s.section)}&station=${encodeURIComponent(s.station)}`);
+        const data = await resp.json();
+        const area = data.business_class_areas.find(a => a.id === areaId);
+        if (!area) { alert('未找到该商务座候车区'); return; }
+
+        document.getElementById('editClassMode').value = 'edit';
+        document.getElementById('editClassId').value = areaId;
+        document.getElementById('className').value = area.name || '';
+        document.getElementById('classType').value = area.type || '高铁站';
+        document.getElementById('classLocation').value = area.location || '';
+        document.getElementById('classConstruction').value = area.construction_entity || '国铁';
+        document.getElementById('classCompletion').value = area.completion_time || '';
+        document.getElementById('classArea').value = area.area || '';
+        document.getElementById('classDecoration').value = area.decoration_investment || '国铁';
+        document.getElementById('classOperation').value = area.operation_mode || '自营';
+        document.getElementById('classOutsource').value = area.outsource_company || '';
+        document.getElementById('classLounge1').value = area.lounge1_area || '';
+        document.getElementById('classLounge2').value = area.lounge2_area || '';
+        document.getElementById('classLounge3').value = area.lounge3_area || '';
+        document.getElementById('classChannel').value = area.has_independent_channel || '是';
+        document.getElementById('classVerify').value = area.checkin_ticket_verify || '';
+
+        document.getElementById('modalClassTitle').textContent = '编辑商务座候车区';
+        openModal('modalBusinessClass');
+    }
+
+    async function deleteBusinessClass(areaId) {
+        if (!confirm('确定要删除该商务座候车区吗？')) return;
+        if (currentStations.length === 0) return;
+        const s = currentStations[0];
+        try {
+            const resp = await fetch(`/api/business_class_area/${areaId}`, {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ railway: s.railway, bureau: s.bureau, section: s.section, station: s.station })
+            });
+            const result = await resp.json();
+            if (result.status === 'success') {
+                alert('删除成功');
+                loadStationsByPath(currentSelectedPath, currentSelectedType);
+            } else {
+                alert('删除失败：' + (result.message || '未知错误'));
+            }
+        } catch (e) {
+            alert('删除失败：' + e.message);
+        }
+    }
+
+    async function saveBusinessClass(event) {
+        event.preventDefault();
+        if (currentStations.length === 0) return;
+        const s = currentStations[0];
+
+        const areaData = {
+            name: document.getElementById('className').value,
+            type: document.getElementById('classType').value,
+            location: document.getElementById('classLocation').value,
+            construction_entity: document.getElementById('classConstruction').value,
+            completion_time: document.getElementById('classCompletion').value,
+            area: document.getElementById('classArea').value,
+            decoration_investment: document.getElementById('classDecoration').value,
+            operation_mode: document.getElementById('classOperation').value,
+            outsource_company: document.getElementById('classOutsource').value,
+            lounge1_area: document.getElementById('classLounge1').value,
+            lounge2_area: document.getElementById('classLounge2').value,
+            lounge3_area: document.getElementById('classLounge3').value,
+            has_independent_channel: document.getElementById('classChannel').value,
+            checkin_ticket_verify: document.getElementById('classVerify').value
+        };
+
+        const mode = document.getElementById('editClassMode').value;
+        const areaId = document.getElementById('editClassId').value;
+        const url = mode === 'edit' ? `/api/business_class_area/${areaId}` : '/api/business_class_area/add';
+        const method = mode === 'edit' ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ railway: s.railway, bureau: s.bureau, section: s.section, station: s.station, area: areaData })
+            });
+            const result = await resp.json();
+            if (result.status === 'success') {
+                alert(mode === 'edit' ? '更新成功' : '新增成功');
+                closeModal('modalBusinessClass');
+                loadStationsByPath(currentSelectedPath, currentSelectedType);
+            } else {
+                alert('保存失败：' + (result.message || '未知错误'));
+            }
+        } catch (e) {
+            alert('保存失败：' + e.message);
+        }
+    }
+
+    // ============================================================
+    // 商业候车区 CRUD
+    // ============================================================
+    function openAddCommercial() {
+        if (currentStations.length === 0) {
+            alert('请先从左侧选择一个车站');
+            return;
+        }
+        document.getElementById('editCommercialMode').value = 'add';
+        document.getElementById('editCommercialId').value = '';
+        document.getElementById('commercialForm').reset();
+        document.getElementById('modalCommercialTitle').textContent = '新增商业候车区';
+        openModal('modalCommercial');
+    }
+
+    async function editCommercial(areaId) {
+        if (currentStations.length === 0) return;
+        const s = currentStations[0];
+        const resp = await fetch(`/api/get_station_data?railway=${encodeURIComponent(s.railway)}&bureau=${encodeURIComponent(s.bureau)}&section=${encodeURIComponent(s.section)}&station=${encodeURIComponent(s.station)}`);
+        const data = await resp.json();
+        const area = data.commercial_waiting_areas.find(a => a.id === areaId);
+        if (!area) { alert('未找到该商业候车区'); return; }
+
+        document.getElementById('editCommercialMode').value = 'edit';
+        document.getElementById('editCommercialId').value = areaId;
+        document.getElementById('commercialName').value = area.name || '';
+        document.getElementById('commercialType').value = area.type || '高铁站';
+        document.getElementById('commercialLocation').value = area.location || '';
+        document.getElementById('commercialConstruction').value = area.construction_entity || '国铁';
+        document.getElementById('commercialCompletion').value = area.completion_time || '';
+        document.getElementById('commercialArea').value = area.area || '';
+        document.getElementById('commercialDecoration').value = area.decoration_investment || '国铁';
+        document.getElementById('commercialOutsource').value = area.outsource_company || '';
+        document.getElementById('commercialStatus').value = area.operation_status || '营业';
+        document.getElementById('commercialNaming').value = area.has_naming || '否';
+        document.getElementById('commercialNamingUnit').value = area.naming_unit || '';
+        document.getElementById('commercialContractEnd').value = area.contract_end_date || '';
+
+        document.getElementById('modalCommercialTitle').textContent = '编辑商业候车区';
+        openModal('modalCommercial');
+    }
+
+    async function deleteCommercial(areaId) {
+        if (!confirm('确定要删除该商业候车区吗？')) return;
+        if (currentStations.length === 0) return;
+        const s = currentStations[0];
+        try {
+            const resp = await fetch(`/api/commercial_area/${areaId}`, {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ railway: s.railway, bureau: s.bureau, section: s.section, station: s.station })
+            });
+            const result = await resp.json();
+            if (result.status === 'success') {
+                alert('删除成功');
+                loadStationsByPath(currentSelectedPath, currentSelectedType);
+            } else {
+                alert('删除失败：' + (result.message || '未知错误'));
+            }
+        } catch (e) {
+            alert('删除失败：' + e.message);
+        }
+    }
+
+    async function saveCommercial(event) {
+        event.preventDefault();
+        if (currentStations.length === 0) return;
+        const s = currentStations[0];
+
+        const areaData = {
+            name: document.getElementById('commercialName').value,
+            type: document.getElementById('commercialType').value,
+            location: document.getElementById('commercialLocation').value,
+            construction_entity: document.getElementById('commercialConstruction').value,
+            completion_time: document.getElementById('commercialCompletion').value,
+            area: document.getElementById('commercialArea').value,
+            decoration_investment: document.getElementById('commercialDecoration').value,
+            outsource_company: document.getElementById('commercialOutsource').value,
+            operation_status: document.getElementById('commercialStatus').value,
+            has_naming: document.getElementById('commercialNaming').value,
+            naming_unit: document.getElementById('commercialNamingUnit').value,
+            contract_end_date: document.getElementById('commercialContractEnd').value
+        };
+
+        const mode = document.getElementById('editCommercialMode').value;
+        const areaId = document.getElementById('editCommercialId').value;
+        const url = mode === 'edit' ? `/api/commercial_area/${areaId}` : '/api/commercial_area/add';
+        const method = mode === 'edit' ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ railway: s.railway, bureau: s.bureau, section: s.section, station: s.station, area: areaData })
+            });
+            const result = await resp.json();
+            if (result.status === 'success') {
+                alert(mode === 'edit' ? '更新成功' : '新增成功');
+                closeModal('modalCommercial');
+                loadStationsByPath(currentSelectedPath, currentSelectedType);
+            } else {
+                alert('保存失败：' + (result.message || '未知错误'));
+            }
+        } catch (e) {
+            alert('保存失败：' + e.message);
+        }
+    }
+
+    // ============================================================
+    // 全局导入导出功能（包含全部三个工作表）
+    // ============================================================
+
+    // 下载模板 - 下载包含全部三个工作表的模板
+    async function downloadTemplate() {
+        try {
+            const resp = await fetch('/api/download_template/all');
+            if (!resp.ok) {
+                throw new Error('下载模板失败');
+            }
+            const blob = await resp.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `车站商务候车室基本信息导入模板_${new Date().toISOString().slice(0,10)}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } catch (e) {
+            alert('下载模板失败：' + e.message);
+        }
+    }
+
+    // 导入数据 - 导入包含全部三个工作表的数据
+    async function importExcel() {
+        const fileInput = document.getElementById('excelUploadAll');
+        const file = fileInput.files[0];
+        if (!file) {
+            alert('请选择Excel文件');
+            return;
+        }
+
+        if (currentStations.length === 0) {
+            alert('请先从左侧选择一个车站');
+            fileInput.value = '';
+            return;
+        }
+        const s = currentStations[0];
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('railway', s.railway);
+        formData.append('bureau', s.bureau);
+        formData.append('section', s.section);
+        formData.append('station', s.station);
+        formData.append('import_type', 'all');
+
+        try {
+            const response = await fetch('/api/import_excel', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                let msg = `导入成功！`;
+                if (result.details) {
+                    const parts = [];
+                    if (result.details.business_waiting > 0) parts.push(`商务候车室 ${result.details.business_waiting} 条`);
+                    if (result.details.business_class > 0) parts.push(`商务座候车区 ${result.details.business_class} 条`);
+                    if (result.details.commercial > 0) parts.push(`商业候车区 ${result.details.commercial} 条`);
+                    msg += `共导入 ${result.count} 条数据（${parts.join('，')}）`;
+                    if (result.skip > 0) {
+                        msg += `，跳过 ${result.skip} 条已存在的重复数据`;
+                    }
+                } else {
+                    msg += `共导入 ${result.count} 条数据`;
+                    if (result.skip > 0) {
+                        msg += `，跳过 ${result.skip} 条已存在的重复数据`;
+                    }
+                }
+                alert(msg);
+                // 刷新当前列表
+                if (currentSelectedPath.length > 0) {
+                    await loadStationsByPath(currentSelectedPath, currentSelectedType);
+                }
+            } else {
+                alert('导入失败：' + (result.message || '未知错误'));
+            }
+        } catch (error) {
+            alert('导入失败：' + error.message);
+        }
+        fileInput.value = '';
+    }
+
+    // 导出数据 - 导出包含全部三个工作表的数据
+    async function exportExcel() {
+        if (currentStations.length === 0) {
+            alert('当前没有数据可导出');
+            return;
+        }
+
+        // 使用当前筛选出的车站列表
+        const stationsToExport = currentStations;
+
+        try {
+            const resp = await fetch('/api/export_excel_by_stations', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    stations: stationsToExport,
+                    export_type: 'all'
+                })
+            });
+
+            if (!resp.ok) {
+                throw new Error('导出请求失败');
+            }
+
+            const blob = await resp.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `全部数据_${new Date().toISOString().slice(0,10)}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } catch (e) {
+            alert('导出失败：' + e.message);
+        }
+    }
+
+    // ===== 点击模态框外部关闭 =====
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+        el.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+            }
+        });
+    });
+
+    // ===== 初始化 =====
+    loadTreeData();
+</script>
+</body>
+</html>
